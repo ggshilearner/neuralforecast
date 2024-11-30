@@ -3086,3 +3086,19 @@ class sCRPS(torch.nn.Module):
         unmean = torch.sum(mask)
         scrps = 2 * mql * unmean / (norm + 1e-5)
         return scrps
+
+
+class Weibull(torch.nn.Module):
+    def __init__(self):
+        super(Weibull, self).__init__()
+
+    def forward(self, y_pred, y_true):
+        # 假设 y_pred 包含两个列，分别是 scale 和 shape 参数
+        scale = y_pred[:, 0]  # Weibull 分布的 scale 参数
+        shape = y_pred[:, 1]  # Weibull 分布的 shape 参数
+
+        # Weibull 分布的负对数似然
+        distribution = torch.distributions.Weibull(scale, shape)
+        negative_log_likelihood = -distribution.log_prob(y_true)
+
+        return negative_log_likelihood.mean()
