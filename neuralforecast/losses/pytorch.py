@@ -1900,7 +1900,7 @@ class DistributionLoss(torch.nn.Module):
             StudentT=StudentT,
             NegativeBinomial=NegativeBinomial,
             Tweedie=Tweedie,
-            ISQF=ISQF,
+            ISQF=ISQF,Weibull=WeibullLoss
         )
         domain_maps = dict(
             Bernoulli=bernoulli_domain_map,
@@ -1909,7 +1909,7 @@ class DistributionLoss(torch.nn.Module):
             StudentT=student_domain_map,
             NegativeBinomial=nbinomial_domain_map,
             Tweedie=tweedie_domain_map,
-            ISQF=partial(isqf_domain_map, quantiles=qs, num_pieces=num_pieces),
+            ISQF=partial(isqf_domain_map, quantiles=qs, num_pieces=num_pieces),Weibull=weibull_domain_map
         )
         scale_decouples = dict(
             Bernoulli=bernoulli_scale_decouple,
@@ -1918,7 +1918,7 @@ class DistributionLoss(torch.nn.Module):
             StudentT=student_scale_decouple,
             NegativeBinomial=nbinomial_scale_decouple,
             Tweedie=tweedie_scale_decouple,
-            ISQF=isqf_scale_decouple,
+            ISQF=isqf_scale_decouple,Weibull=weibull_scale_decouple
         )
         param_names = dict(
             Bernoulli=["-logits"],
@@ -3086,3 +3086,25 @@ class sCRPS(torch.nn.Module):
         unmean = torch.sum(mask)
         scrps = 2 * mql * unmean / (norm + 1e-5)
         return scrps
+class WeibullLoss(torch.nn.Module):
+    def __init__(self):
+        super(WeibullLoss, self).__init__()
+
+    def forward(self, y_pred, y_true):
+        # 假设 y_pred 包含 scale 和 shape 参数
+        scale = y_pred[:, 0]  # Weibull 分布的 scale 参数
+        shape = y_pred[:, 1]  # Weibull 分布的 shape 参数
+
+        # Weibull 分布的负对数似然损失
+        distribution = torch.distributions.Weibull(scale, shape)
+        negative_log_likelihood = -distribution.log_prob(y_true)
+
+        return negative_log_likelihood.mean()
+
+    def weibull_domain_map(y_hat):
+        """
+        Weibull Domain Map: Ensure scale and shape parameters are positive.
+        """
+        scale = torch.nn.functional.softplus(y_hat[:, 0])  # 确保 scale 参数为正
+        shape = torch.nn.functional.softplus(y_hat[:, 1])  # 确保 shape 参数为正
+        return scale, shape
